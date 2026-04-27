@@ -10,13 +10,11 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Create Issue and Assign to Milestone
+      - name: Create Issue
         env:
-          GH_TOKEN: ${{ github.token }}
-          MILESTONE_TITLE: ${{ github.event.milestone.title }}
-          MILESTONE_NUMBER: ${{ github.event.milestone.number }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
             --title "Evidence" \
-            --body "This issue was automatically created as evidence for the milestone: $MILESTONE_TITLE" \
-            --milestone "$MILESTONE_NUMBER"
+            --body "This issue is linked to milestone: ${{ github.event.milestone.title }}" \
+            --milestone "${{ github.event.milestone.number }}"
