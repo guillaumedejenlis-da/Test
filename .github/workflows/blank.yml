@@ -13,15 +13,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Wait for GitHub indexing
-        run: sleep 10 # This gives GitHub a moment to recognize the new milestone
-
-      - name: Create Issue and Assign to Milestone
+      - name: Create Issue with Retries
         env:
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          M_TITLE: ${{ github.event.milestone.title }}
         run: |
-          gh issue create \
-            --repo ${{ github.repository }} \
-            --title "Evidence" \
-            --body "Auto-generated issue for milestone: ${{ github.event.milestone.title }}" \
-            --milestone "${{ github.event.milestone.number }}"
+          # Try to create the issue up to 5 times with a 10s sleep between attempts
+          for i in {1..5}; do
+            echo "Attempt $i: Creating issue for milestone '$M_TITLE'..."
+            if gh issue create \
+              --repo "$REPO" \
+              --title "Evidence" \
+              --body "Auto-generated for milestone: $M_TITLE" \
+              --milestone "$M_TITLE"; then
+              echo "Success!"
+              exit 0
+            fi
+            echo "Milestone not found yet. Waiting 10 seconds..."
+            sleep 10
+          done
+          echo "Failed after 5 attempts."
+          exit 1
