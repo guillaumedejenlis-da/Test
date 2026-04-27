@@ -1,0 +1,45 @@
+name: Relocate Evidence on Issue Close
+
+on:
+  issues:
+    types: [closed]
+
+jobs:
+  relocate_evidence:
+    if: github.event.issue.title == 'Document Evidences for Milestone Success Criterias'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write # Required if the "link" is a PR
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract Evidence and Target Link
+        id: process
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # 1. Find the target link in the issue description
+          # Looks for the first URL starting with https://github.com
+          TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | head -n 1)
+          
+          if [ -z "$TARGET_URL" ]; then
+            echo "No target link found in issue description."
+            exit 1
+          fi
+
+          # 2. Get all comments and find the one starting with "Evidence"
+          # We use jq to filter comments for the one starting with the string 'Evidence'
+          EVIDENCE_CONTENT=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1)
+
+          if [ -z "$EVIDENCE_CONTENT" ]; then
+            echo "No comment starting with 'Evidence' found."
+            exit 1
+          fi
+
+          # 3. Post the evidence to the target link
+          # 'gh comment create' works for both Issues and PR URLs
+          gh item-edit "$TARGET_URL" --add-comment "$EVIDENCE_CONTENT"
