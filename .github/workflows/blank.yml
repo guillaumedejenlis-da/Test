@@ -10,11 +10,15 @@ jobs:
     permissions:
       issues: write
     steps:
-      - name: Create Issue
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create Issue and Assign to Milestone
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh issue create \
+            --repo ${{ github.repository }} \
             --title "Evidence" \
-            --body "This issue is linked to milestone: ${{ github.event.milestone.title }}" \
+            --body "Auto-generated issue for milestone: ${{ github.event.milestone.title }}" \
             --milestone "${{ github.event.milestone.number }}"
