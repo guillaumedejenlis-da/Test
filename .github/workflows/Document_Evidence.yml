@@ -6,7 +6,6 @@ on:
 
 jobs:
   relocate_evidence:
-    # Only runs if the closed issue has this exact title
     if: github.event.issue.title == 'Document Evidences for Milestone Success Criterias'
     runs-on: ubuntu-latest
     permissions:
@@ -16,36 +15,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract Evidence and Target Link
-        id: process
+      - name: Extract and Post Evidence
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # 1. Find the target link (PR or Issue)
-          # We search for links but EXCLUDE the one containing "milestone"
+          # 1. Find the target link
           TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | grep -v "/milestone/" | head -n 1)
           
           if [ -z "$TARGET_URL" ]; then
-            echo "Error: No target link (PR or Issue) found in the issue description."
+            echo "Error: No target link found."
             exit 1
           fi
 
-          echo "Target URL identified: $TARGET_URL"
+          # 2. Extract full multiline comment starting with Evidence
+          # We use @base64 to ensure newlines and special characters aren't lost during extraction
+          ENCODED_EVIDENCE=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1)
 
-          # 2. Get the comment that starts with the word "Evidence"
-          # We use jq to parse the JSON response from the GitHub CLI
-          EVIDENCE_CONTENT=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1)
-
-          if [ -z "$EVIDENCE_CONTENT" ]; then
-            echo "Error: No comment starting with 'Evidence' found in this issue."
+          if [ -z "$ENCODED_EVIDENCE" ]; then
+            echo "Error: No comment starting with 'Evidence' found."
             exit 1
           fi
 
-          # 3. Post the evidence to the target link
-          # 'gh issue comment' accepts a full URL and works for both Issues and PRs
-          echo "Posting evidence to target..."
-          gh issue comment "$TARGET_URL" --body "$EVIDENCE_CONTENT"
+          # 3. Post the comment using a file to preserve exact formatting/images
+          echo "$ENCODED_EVIDENCE" > evidence_tmp.md
           
-          echo "Successfully relocated evidence."
+          echo "Posting full evidence to $TARGET_URL..."
+          gh issue comment "$TARGET_URL" --body-file evidence_tmp.md
