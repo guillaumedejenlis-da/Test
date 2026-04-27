@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Wait for GitHub indexing
+        run: sleep 10 # This gives GitHub a moment to recognize the new milestone
+
       - name: Create Issue and Assign to Milestone
         env:
           GH_TOKEN: ${{ github.token }}
