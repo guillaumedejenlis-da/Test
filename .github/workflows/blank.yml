@@ -24,7 +24,7 @@ jobs:
             echo "Attempt $i: Creating issue for milestone '$M_TITLE'..."
             if gh issue create \
               --repo "$REPO" \
-              --title "Evidence" \
+              --title "Document Milestone Success Criterias Evidences" \
               --body "Auto-generated for milestone: $M_TITLE" \
               --milestone "$M_TITLE"; then
               echo "Success!"
