@@ -15,21 +15,34 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract Evidence and Target Link
+     - name: Extract Evidence and Target Link
         id: process
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # 1. Find the target link in the issue description
-          # Looks for the first URL starting with https://github.com
-          TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | head -n 1)
+          # 1. Find the target link
+          # We search for links but EXCLUDE the one containing "milestone" 
+          TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | grep -v "/milestone/" | head -n 1)
           
           if [ -z "$TARGET_URL" ]; then
-            echo "No target link found in issue description."
+            echo "No target link (PR/Issue) found in description."
             exit 1
           fi
+
+          # 2. Get the Evidence comment
+          EVIDENCE_CONTENT=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1)
+
+          if [ -z "$EVIDENCE_CONTENT" ]; then
+            echo "No comment starting with 'Evidence' found."
+            exit 1
+          fi
+
+          # 3. Post the comment using the standard 'gh issue comment' command
+          # This command accepts a full URL as the target
+          echo "Posting evidence to $TARGET_URL"
+          gh issue comment "$TARGET_URL" --body "$EVIDENCE_CONTENT"
 
           # 2. Get all comments and find the one starting with "Evidence"
           # We use jq to filter comments for the one starting with the string 'Evidence'
