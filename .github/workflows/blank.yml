@@ -1,0 +1,22 @@
+name: Create Evidence Issue on Milestone
+
+on:
+  milestone:
+    types: [created]
+
+jobs:
+  create_issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create Issue and Assign to Milestone
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MILESTONE_TITLE: ${{ github.event.milestone.title }}
+          MILESTONE_NUMBER: ${{ github.event.milestone.number }}
+        run: |
+          gh issue create \
+            --title "Evidence" \
+            --body "This issue was automatically created as evidence for the milestone: $MILESTONE_TITLE" \
+            --milestone "$MILESTONE_NUMBER"
