@@ -18,20 +18,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           M_TITLE: ${{ github.event.milestone.title }}
+          M_DESC: ${{ github.event.milestone.description }}
         run: |
-          # Try to create the issue up to 5 times with a 10s sleep between attempts
+          # Use a placeholder if the description is empty
+          ISSUE_BODY="${M_DESC:-No description provided for this milestone.}"
+
           for i in {1..5}; do
             echo "Attempt $i: Creating issue for milestone '$M_TITLE'..."
             if gh issue create \
               --repo "$REPO" \
-              --title "Document Milestone Success Criterias Evidences" \
-              --body "Auto-generated for milestone: $M_TITLE" \
+              --title "Document Evidences for Milestone Success Criterias" \
+              --body "$ISSUE_BODY" \
               --milestone "$M_TITLE"; then
               echo "Success!"
               exit 0
             fi
-            echo "Milestone not found yet. Waiting 10 seconds..."
+            echo "Waiting for GitHub indexing..."
             sleep 10
           done
-          echo "Failed after 5 attempts."
           exit 1
