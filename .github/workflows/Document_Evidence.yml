@@ -6,7 +6,6 @@ on:
 
 jobs:
   relocate_evidence:
-    # Changed to 'contains' to be more flexible with titles (handles the "TT" suffix)
     if: contains(github.event.issue.title, 'Document Evidences for Milestone Success Criterias')
     runs-on: ubuntu-latest
     permissions:
@@ -31,15 +30,13 @@ jobs:
             exit 1
           fi
 
-          # 2. Extract the FULL body of the first comment starting with "Evidence"
-          # Using raw output (-r) and specifically selecting the first matching body
-          gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1 > evidence_tmp.md
-          
-          # Note: If the above still truncates, we use this more explicit jq selector:
-          # gh issue view "$ISSUE_NUMBER" --json comments -q '.comments | map(select(.body | startswith("Evidence")))[0].body' > evidence_tmp.md
+          # 2. Extract the FULL body of the correct comment
+          # We use map() to find all matching comments and then take the .body of the first one [0]
+          # This ensures the entire multi-line string is preserved as one object.
+          gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments | map(select(.body | startswith("Evidence"))) | .[0].body' > evidence_tmp.md
 
-          # 3. Validation: check if we actually caught the content
-          if [ ! -s evidence_tmp.md ]; then
+          # 3. Validation: check if the file has content
+          if [ ! -s evidence_tmp.md ] || [ "$(cat evidence_tmp.md)" == "null" ]; then
             echo "Error: No comment starting with 'Evidence' found."
             exit 1
           fi
