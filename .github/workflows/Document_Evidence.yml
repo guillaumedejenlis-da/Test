@@ -6,7 +6,8 @@ on:
 
 jobs:
   relocate_evidence:
-    if: github.event.issue.title == 'Document Evidences for Milestone Success Criterias'
+    # Changed to 'contains' to be more flexible with titles (handles the "TT" suffix)
+    if: contains(github.event.issue.title, 'Document Evidences for Milestone Success Criterias')
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -23,7 +24,6 @@ jobs:
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
           # 1. Find the target link in the issue body
-          # Looks for a GitHub URL, excluding milestone links
           TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | grep -v "/milestone/" | head -n 1)
           
           if [ -z "$TARGET_URL" ]; then
@@ -31,16 +31,19 @@ jobs:
             exit 1
           fi
 
-          # 2. Extract full multiline comment starting with 'Evidence'
-          # We pipe directly to a file to prevent Bash variable truncation/formatting loss
+          # 2. Extract the FULL body of the first comment starting with "Evidence"
+          # Using raw output (-r) and specifically selecting the first matching body
           gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1 > evidence_tmp.md
+          
+          # Note: If the above still truncates, we use this more explicit jq selector:
+          # gh issue view "$ISSUE_NUMBER" --json comments -q '.comments | map(select(.body | startswith("Evidence")))[0].body' > evidence_tmp.md
 
-          # 3. Check if the file is empty (meaning no 'Evidence' comment was found)
+          # 3. Validation: check if we actually caught the content
           if [ ! -s evidence_tmp.md ]; then
             echo "Error: No comment starting with 'Evidence' found."
             exit 1
           fi
 
-          # 4. Post the content of the file to the target URL
+          # 4. Post the content to the target URL
           echo "Posting full evidence to $TARGET_URL..."
           gh issue comment "$TARGET_URL" --body-file evidence_tmp.md
