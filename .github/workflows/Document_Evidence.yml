@@ -29,17 +29,13 @@ jobs:
             exit 1
           fi
 
-          # 2. Extract full multiline comment starting with Evidence
-          # We use @base64 to ensure newlines and special characters aren't lost during extraction
-          ENCODED_EVIDENCE=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1)
+          # 2. & 3. Extract and write directly to file (Removes variable truncation)
+          gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1 > evidence_tmp.md
 
-          if [ -z "$ENCODED_EVIDENCE" ]; then
+          if [ ! -s evidence_tmp.md ]; then
             echo "Error: No comment starting with 'Evidence' found."
             exit 1
           fi
-
-          # 3. Post the comment using a file to preserve exact formatting/images
-          echo "$ENCODED_EVIDENCE" > evidence_tmp.md
           
           echo "Posting full evidence to $TARGET_URL..."
           gh issue comment "$TARGET_URL" --body-file evidence_tmp.md
