@@ -11,6 +11,7 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,21 +22,25 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_BODY: ${{ github.event.issue.body }}
         run: |
-          # 1. Find the target link
+          # 1. Find the target link in the issue body
+          # Looks for a GitHub URL, excluding milestone links
           TARGET_URL=$(echo "$ISSUE_BODY" | grep -o 'https://github.com/[^ ]*' | grep -v "/milestone/" | head -n 1)
           
           if [ -z "$TARGET_URL" ]; then
-            echo "Error: No target link found."
+            echo "Error: No target link found in the issue body."
             exit 1
           fi
 
-          # 2. & 3. Extract and write directly to file (Removes variable truncation)
+          # 2. Extract full multiline comment starting with 'Evidence'
+          # We pipe directly to a file to prevent Bash variable truncation/formatting loss
           gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[] | select(.body | startswith("Evidence")) | .body' | head -n 1 > evidence_tmp.md
 
+          # 3. Check if the file is empty (meaning no 'Evidence' comment was found)
           if [ ! -s evidence_tmp.md ]; then
             echo "Error: No comment starting with 'Evidence' found."
             exit 1
           fi
-          
+
+          # 4. Post the content of the file to the target URL
           echo "Posting full evidence to $TARGET_URL..."
           gh issue comment "$TARGET_URL" --body-file evidence_tmp.md
