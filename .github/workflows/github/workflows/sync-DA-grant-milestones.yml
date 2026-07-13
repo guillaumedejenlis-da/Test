@@ -1,0 +1,44 @@
+name: Sync DA Grant Milestones with DA OSS Roadmap
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs once a day. Adjust to '0 * * * *' for hourly.
+  workflow_dispatch: # Allows you to run it manually anytime
+
+jobs:
+  sync-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch and Add Issues
+        env:
+          # 1. Replace with your actual Project URL
+          PROJECT_URL: "https://github.com/users/guillaumedejenlis-da/projects/1"
+          
+          # 2. Replace with the target open-source repo
+          EXTERNAL_REPO: "canton-foundation/canton-dev-fund" 
+          
+          # 3. Replace with the label you are targeting
+          LABEL_NAME: "digitalasset"
+          
+          # Requires a Personal Access Token (PAT) saved in your repo secrets
+          # permissions needed: repository (read) and project (write)
+          GH_TOKEN: ${{ secrets.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 }}
+          
+        run: |
+          echo "Searching for open issues with label '$LABEL_NAME' in $EXTERNAL_REPO..."
+          
+          # 1. Fetch the issue URLs using GitHub CLI search
+          # We check for issues updated in the last 2 days to avoid spamming your board with duplicates
+          ISSUES=$(gh issue list -R "$EXTERNAL_REPO" --label "$LABEL_NAME" --state open --limit 50 --json url --jq '.[].url')
+          
+          if [ -z "$ISSUES" ]; then
+            echo "No new issues found."
+            exit 0
+          fi
+          
+          # 2. Loop through each issue and add it to your project board
+          for URL in $ISSUES; do
+            echo "Adding to project: $URL"
+            # gh project item-add handles adding by URL natively
+            gh project item-add "$PROJECT_URL" --url "$URL" || echo "Issue might already exist on board, skipping..."
+          done
