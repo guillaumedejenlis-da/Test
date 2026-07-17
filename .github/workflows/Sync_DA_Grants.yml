@@ -18,7 +18,7 @@ jobs:
           EXTERNAL_REPO: "canton-foundation/canton-dev-fund" 
           
           # 3. Replace with the label you are targeting
-          LABEL_NAME: "Imported Grant Milestone"
+          LABEL_NAME: "digitalasset"
           
           # Requires a Personal Access Token (PAT) saved in your repo secrets
           # permissions needed: repository (read) and project (write)
